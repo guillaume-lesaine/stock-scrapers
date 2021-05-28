@@ -1,5 +1,6 @@
 import argparse
 import json
+import logging
 import os
 
 from selenium import webdriver
@@ -10,14 +11,16 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 def main(data: str, configuration: str, logs: str):
 
-    # Initialize logging path
-    path_driver_logs = os.path.join(logs, "geckodriver.log")
+    logging.info("Application 'selenium_get_urls' started.")
 
     # Initialize driver
-    driver = webdriver.Firefox(service_log_path=path_driver_logs)
+    driver = webdriver.Firefox(service_log_path=logs)
+    logging.info("Firefox driver is initialized.")
 
     # Go to site
-    driver.get("https://www.boursorama.com/bourse/actions/palmares/france")
+    url = "https://www.boursorama.com/bourse/actions/palmares/france"
+    driver.get(url)
+    logging.info(f"Url '{url}' was successfully accessed.")
 
     # Pass cookie acknowledgment
     WebDriverWait(driver, 10,).until(
@@ -25,6 +28,7 @@ def main(data: str, configuration: str, logs: str):
             (By.XPATH, '//button[@id="didomi-notice-agree-button"]'),
         )
     ).click()
+    logging.info(f"Cookie acknowledgment was performed.")
 
     # Detect form and populate it
     form = driver.find_element_by_xpath('//form[@name="france_filter"]')
@@ -73,6 +77,8 @@ def main(data: str, configuration: str, logs: str):
     submit = form.find_element_by_id("france_filter_filter")
     submit.click()
 
+    logging.info(f"Form was submited.")
+
     # Go over each page to harvest the stock urls
     result = {}
 
@@ -100,6 +106,14 @@ def main(data: str, configuration: str, logs: str):
             for s in stocks:
                 result[s.text] = s.get_attribute("href")
 
+    logging.info(
+        "Urls have been harvested"
+        + str(len(result))
+        + " url(s) on "
+        + str(len(page_hrefs))
+        + " page(s)."
+    )
+
     # Save urls to file
     path_urls = os.path.join(
         data,
@@ -118,6 +132,8 @@ def main(data: str, configuration: str, logs: str):
             f,
         )
 
+    logging.info("Application 'selenium_get_urls' successfully.")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -128,4 +144,13 @@ if __name__ == "__main__":
     parser.add_argument("--logs", help="Path to the logs directory.")
     args = parser.parse_args()
 
-    main(data=args.data, configuration=args.configuration, logs=args.logs)
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s: %(levelname)s: %(message)s",
+    )
+
+    try:
+        main(data=args.data, configuration=args.configuration, logs=args.logs)
+    except Exception:
+        logging.exception("Fatal error in main.", exc_info=True)
+        raise

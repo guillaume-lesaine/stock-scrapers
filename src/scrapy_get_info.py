@@ -1,15 +1,15 @@
 import argparse
 import json
+import logging
 import os
 
 from scrapy.crawler import CrawlerProcess
 from spiders.stocks import Stocks
 
 
-def main(data: str, logs: str):
+def main(data: str):
 
-    # Initialize logging path
-    path_logs = os.path.join(logs, "scrapy.log")
+    logging.info("Application 'scrapy_get_info' started.")
 
     # Clean pre-existing output file
     path_info = os.path.join(data, "info.json")
@@ -20,11 +20,11 @@ def main(data: str, logs: str):
     path_urls = os.path.join(data, "urls.json")
     with open(path_urls) as f:
         urls = list(json.loads(f.read()).values())
+    logging.info(f"Urls loaded for {len(urls)} stocks.")
 
     # Crawl
     process = CrawlerProcess(
         settings={
-            "LOG_FILE": path_logs,
             "FEED_URI": path_info,
             "FEED_FORMAT": "json",
             "FEED_EXPORTERS": {
@@ -38,6 +38,8 @@ def main(data: str, logs: str):
     process.crawl(Stocks)
     process.start()
 
+    logging.info("Application 'scrapy_get_info' terminated successfully.")
+
 
 if __name__ == "__main__":
 
@@ -46,4 +48,13 @@ if __name__ == "__main__":
     parser.add_argument("--logs", help="Path to the logs directory.")
     args = parser.parse_args()
 
-    main(data=args.data, logs=args.logs)
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s: %(levelname)s: %(message)s",
+    )
+
+    try:
+        main(data=args.data, logs=args.logs)
+    except Exception:
+        logging.exception("Fatal error in main.", exc_info=True)
+        raise

@@ -31,6 +31,13 @@ class Stocks(scrapy.Spider):
         objectif = float(re.sub(r"\s|EUR", "", blob_cleaned[1]))
         potentiel = float(re.sub(r"\s|%", "", blob_cleaned[3]))
 
+        blob = response.xpath(
+            '//*[contains(text(), "Variation sur 5 jours")]'
+        ).get()
+        blob_cleaned = [x.strip() for x in blob.split("\n")]
+        blob_cleaned = [x for x in blob_cleaned if not x.startswith("<")]
+        variation = float(re.sub(r"\s|%", "", blob_cleaned[3]))
+
         gauge = response.xpath(
             '//div[@class="c-median-gauge__tooltip"]/text()'
         ).get()
@@ -42,5 +49,7 @@ class Stocks(scrapy.Spider):
             "objectif": objectif,
             "potentiel": potentiel,
             "gauge": gauge,
+            "variation": variation,
+            "url": response.request.url,
         }
         return result
