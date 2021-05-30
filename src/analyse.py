@@ -5,7 +5,7 @@ import os
 import pandas as pd
 
 
-def main(data):
+def main(data: str):
 
     logging.info("Application 'analyse' started.")
 
@@ -16,8 +16,8 @@ def main(data):
     logging.info(f"Information read from '{path_info}'.")
 
     df = df[
-        (df["price"] < 100) & (df["potentiel"] > 10) & (df["gauge"] < 2)
-    ].sort_values("potentiel")
+        (df["price"] < 100) & (df["potential"] > 10) & (df["gauge"] < 2)
+    ].sort_values("potential", ascending=False)
 
     df.to_csv(path_result, index=False)
 
@@ -27,10 +27,8 @@ def main(data):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", help="Path to the data directory.")
-    parser.add_argument("--logs", help="Path to the logs directory.")
     args = parser.parse_args()
 
-    path_app_logs = os.path.join(args.logs, "analyse.log")
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s: %(levelname)s: %(message)s",

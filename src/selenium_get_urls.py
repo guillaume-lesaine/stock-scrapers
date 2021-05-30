@@ -2,11 +2,26 @@ import argparse
 import json
 import logging
 import os
+import sys
 
+import backoff
+import urllib3
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
+
+
+@backoff.on_exception(
+    backoff.expo, urllib3.exceptions.MaxRetryError, max_tries=5, jitter=None
+)
+def selenium_connect(url, options):
+    return webdriver.Remote(
+        command_executor=url,
+        desired_capabilities=webdriver.DesiredCapabilities.FIREFOX,
+        options=options,
+    )
 
 
 def main(data: str, configuration: str, logs: str):
@@ -14,7 +29,17 @@ def main(data: str, configuration: str, logs: str):
     logging.info("Application 'selenium_get_urls' started.")
 
     # Initialize driver
-    driver = webdriver.Firefox(service_log_path=logs)
+    SELENIUM_URL = "firefox:4444"
+    opts = Options()
+    opts.headless = True
+    try:
+        driver = selenium_connect(
+            f"http://{SELENIUM_URL}/wd/hub", options=opts
+        )
+    except urllib3.exceptions.MaxRetryError:
+        logging.error("Unable to connect to Selenium.")
+        sys.exit(1)
+
     logging.info("Firefox driver is initialized.")
 
     # Go to site
@@ -106,6 +131,9 @@ def main(data: str, configuration: str, logs: str):
             for s in stocks:
                 result[s.text] = s.get_attribute("href")
 
+    # Close driver
+    driver.close()
+
     logging.info(
         "Urls have been harvested"
         + str(len(result))
@@ -148,6 +176,7 @@ if __name__ == "__main__":
         level=logging.INFO,
         format="%(asctime)s: %(levelname)s: %(message)s",
     )
+    logging.getLogger("urllib3").setLevel(logging.ERROR)
 
     try:
         main(data=args.data, configuration=args.configuration, logs=args.logs)

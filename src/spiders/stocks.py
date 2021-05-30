@@ -28,15 +28,18 @@ class Stocks(scrapy.Spider):
         ).get()
         blob_cleaned = [x.strip() for x in blob.split("\n")]
         blob_cleaned = [x for x in blob_cleaned if not x.startswith("<")]
-        objectif = float(re.sub(r"\s|EUR", "", blob_cleaned[1]))
-        potentiel = float(re.sub(r"\s|%", "", blob_cleaned[3]))
+        target = float(re.sub(r"\s|EUR", "", blob_cleaned[1]))
+        potential = float(re.sub(r"\s|%", "", blob_cleaned[3]))
 
         blob = response.xpath(
             '//*[contains(text(), "Variation sur 5 jours")]'
         ).get()
-        blob_cleaned = [x.strip() for x in blob.split("\n")]
-        blob_cleaned = [x for x in blob_cleaned if not x.startswith("<")]
-        variation = float(re.sub(r"\s|%", "", blob_cleaned[3]))
+        if blob is not None:
+            blob_cleaned = [x.strip() for x in blob.split("\n")]
+            blob_cleaned = [x for x in blob_cleaned if not x.startswith("<")]
+            variation = float(re.sub(r"\s|%", "", blob_cleaned[3]))
+        else:
+            variation = "NA"
 
         gauge = response.xpath(
             '//div[@class="c-median-gauge__tooltip"]/text()'
@@ -46,10 +49,10 @@ class Stocks(scrapy.Spider):
         result = {
             "company": company,
             "price": price,
-            "objectif": objectif,
-            "potentiel": potentiel,
+            "target": target,
+            "potential": potential,
             "gauge": gauge,
-            "variation": variation,
+            "variation_5days": variation,
             "url": response.request.url,
         }
         return result

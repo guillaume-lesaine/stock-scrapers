@@ -1,0 +1,4 @@
+backoff==1.10.0
+pandas==1.2.4
+selenium==3.141.0
+scrapy==2.5.0

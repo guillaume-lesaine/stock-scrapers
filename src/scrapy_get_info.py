@@ -45,7 +45,6 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", help="Path to the data directory.")
-    parser.add_argument("--logs", help="Path to the logs directory.")
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -54,7 +53,7 @@ if __name__ == "__main__":
     )
 
     try:
-        main(data=args.data, logs=args.logs)
+        main(data=args.data)
     except Exception:
         logging.exception("Fatal error in main.", exc_info=True)
         raise

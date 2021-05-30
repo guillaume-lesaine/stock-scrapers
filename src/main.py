@@ -8,18 +8,22 @@ from scrapy_get_info import main as scrapy_get_info_main
 from selenium_get_urls import main as selenium_get_urls_main
 
 
-def main(data, configuration, logs):
+def main(data: str, configuration: str, logs: str):
 
     # Cleanup data directory
-    data_paths = glob.glob(os.path.join(data, "*"))
-    for f in data_paths:
-        os.remove(f)
+    if os.path.exists(data):
+        data_paths = glob.glob(os.path.join(data, "*"))
+        for f in data_paths:
+            os.remove(f)
+    else:
+        os.mkdir(data)
 
-    selenium_get_urls_main(data, configuration, logs)
+    # Run applications
+    selenium_get_urls_main(data=data, configuration=configuration, logs=logs)
 
-    scrapy_get_info_main(data)
+    scrapy_get_info_main(data=data)
 
-    analyse_main(data)
+    analyse_main(data=data)
 
 
 if __name__ == "__main__":
@@ -31,6 +35,11 @@ if __name__ == "__main__":
     )
     parser.add_argument("--logs", help="Path to the logs directory.")
     args = parser.parse_args()
+
+    # Create log directory if needed
+    logs_directory = os.path.dirname(args.logs)
+    if not os.path.exists(logs_directory):
+        os.mkdir(logs_directory)
 
     logging.basicConfig(
         filename=args.logs,
