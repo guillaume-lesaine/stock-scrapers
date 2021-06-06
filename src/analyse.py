@@ -12,8 +12,17 @@ def main(data: str):
     path_info = os.path.join(data, "info.json")
     path_result = os.path.join(data, "result.csv")
 
-    df = pd.read_json(path_info, orient="records")
+    df = pd.read_json(
+        path_info,
+        orient="records",
+    )
     logging.info(f"Information read from '{path_info}'.")
+
+    df = df[
+        (df["target"] != "NA")
+        & (df["potential"] != "NA")
+        & (df["gauge"] != "NA")
+    ]
 
     df = df[
         (df["price"] < 100) & (df["potential"] > 10) & (df["gauge"] < 2)

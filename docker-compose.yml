@@ -1,13 +1,17 @@
 version: '2'
 
 services:
+
   firefox:
     container_name: 'firefox'
     image: 'selenium/standalone-firefox:88.0'
+
   scraper:
     container_name: 'scraper'
-    image: 'stock-scrapers/boursorama-france:0.2'
+    image: 'stock-scrapers/boursorama-france:0.3'
     volumes:
-        - './mnt:/app/mnt'
+      - './mnt:/app/mnt'
     depends_on:
       - firefox
+    environment:
+      - SELENIUM_URL=firefox:4444

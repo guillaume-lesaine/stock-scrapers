@@ -3,12 +3,12 @@ import glob
 import logging
 import os
 
-from analyse import main as analyse_main
-from scrapy_get_info import main as scrapy_get_info_main
-from selenium_get_urls import main as selenium_get_urls_main
+import analyse
+import scrapy_get_info
+import selenium_get_urls
 
 
-def main(data: str, configuration: str, logs: str):
+def main(data: str, configuration: str):
 
     # Cleanup data directory
     if os.path.exists(data):
@@ -19,11 +19,11 @@ def main(data: str, configuration: str, logs: str):
         os.mkdir(data)
 
     # Run applications
-    selenium_get_urls_main(data=data, configuration=configuration, logs=logs)
+    selenium_get_urls.main(data=data, configuration=configuration)
 
-    scrapy_get_info_main(data=data)
+    scrapy_get_info.main(data=data)
 
-    analyse_main(data=data)
+    analyse.main(data=data)
 
 
 if __name__ == "__main__":
@@ -48,7 +48,7 @@ if __name__ == "__main__":
     )
 
     try:
-        main(data=args.data, configuration=args.configuration, logs=args.logs)
+        main(data=args.data, configuration=args.configuration)
     except Exception:
         logging.exception("Fatal error in main.", exc_info=True)
         raise

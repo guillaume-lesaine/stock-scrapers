@@ -2,11 +2,13 @@ import argparse
 import json
 import logging
 import os
+import re
 import sys
 
 import backoff
 import urllib3
 from selenium import webdriver
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.support import expected_conditions as EC
@@ -24,18 +26,20 @@ def selenium_connect(url, options):
     )
 
 
-def main(data: str, configuration: str, logs: str):
+def main(data: str, configuration: str):
 
     logging.info("Application 'selenium_get_urls' started.")
+    logging.getLogger("urllib3").setLevel(logging.ERROR)
 
     # Initialize driver
-    SELENIUM_URL = "firefox:4444"
+    selenium_url = os.environ.get("SELENIUM_URL", default="localhost:4444")
     opts = Options()
     opts.headless = True
     try:
         driver = selenium_connect(
-            f"http://{SELENIUM_URL}/wd/hub", options=opts
+            f"http://{selenium_url}/wd/hub", options=opts
         )
+        driver.set_page_load_timeout(10)
     except urllib3.exceptions.MaxRetryError:
         logging.error("Unable to connect to Selenium.")
         sys.exit(1)
@@ -43,9 +47,9 @@ def main(data: str, configuration: str, logs: str):
     logging.info("Firefox driver is initialized.")
 
     # Go to site
-    url = "https://www.boursorama.com/bourse/actions/palmares/france"
-    driver.get(url)
-    logging.info(f"Url '{url}' was successfully accessed.")
+    base_url = "https://www.boursorama.com/bourse/actions/palmares/france"
+    driver.get(base_url)
+    logging.info(f"Url '{base_url}' was successfully accessed.")
 
     # Pass cookie acknowledgment
     WebDriverWait(driver, 10,).until(
@@ -110,32 +114,65 @@ def main(data: str, configuration: str, logs: str):
     palmares = driver.find_element_by_xpath('//div[@class="c-palmares"]')
 
     # Get page urls
-    pages = palmares.find_elements_by_xpath(
-        './div[2]/div/a[contains(@href,"/actions/")]'
-    )
-    page_hrefs = [p.get_attribute("href") for p in pages]
+    # If more than 10 pages are displayed, the last page is found first, after
+    # that pages are derived from 1 to n. If not the href of each page is
+    # retrieved.
+    try:
+        last_page = palmares.find_element_by_xpath(
+            './div[2]/div/a[@title="Dernière page"]'
+        )
+        logging.info("More than 10 pages detected.")
+        last_page_href = last_page.get_attribute("href")
+        last_page_number = int(
+            re.sub(
+                fr"^{base_url}/page-(?P<page>\d*)\?.*",
+                r"\g<page>",
+                last_page_href,
+            )
+        )
+        query = re.sub(fr"^{base_url}/page-\d*", "", last_page_href)
+        page_hrefs = [
+            f"{base_url}/page-{i}{query}"
+            for i in range(1, last_page_number + 1)
+        ]
+
+    except NoSuchElementException:
+        logging.info("Less than 10 pages detected.")
+        pages = palmares.find_elements_by_xpath(
+            './div[2]/div/a[contains(@href,"/actions/")]'
+        )
+        page_hrefs = [p.get_attribute("href") for p in pages]
 
     # For each page get all stock urls
     if len(page_hrefs) == 0:
         pass
     else:
         for p in page_hrefs:
-            driver.get(p)
+            try:
+                driver.get(p)
+            except TimeoutException:
+                logging.info("Refreshing page due to timeout ...")
+                driver.refresh()
+                driver.get(p)
             palmares = driver.find_element_by_xpath(
                 '//div[@class="c-palmares"]'
             )
             stocks = palmares.find_elements_by_xpath(
                 './/*[contains(@href,"/cours/")]'
             )
-
             for s in stocks:
                 result[s.text] = s.get_attribute("href")
+
+            logging.info(
+                f"Accessed '{driver.current_url}' "
+                f"total stocks harvested: {len(result)}."
+            )
 
     # Close driver
     driver.close()
 
     logging.info(
-        "Urls have been harvested"
+        "Urls have been harvested "
         + str(len(result))
         + " url(s) on "
         + str(len(page_hrefs))
@@ -169,17 +206,15 @@ if __name__ == "__main__":
     parser.add_argument(
         "--configuration", help="Path to the configuration file."
     )
-    parser.add_argument("--logs", help="Path to the logs directory.")
     args = parser.parse_args()
 
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s: %(levelname)s: %(message)s",
     )
-    logging.getLogger("urllib3").setLevel(logging.ERROR)
 
     try:
-        main(data=args.data, configuration=args.configuration, logs=args.logs)
+        main(data=args.data, configuration=args.configuration)
     except Exception:
         logging.exception("Fatal error in main.", exc_info=True)
         raise

@@ -23,14 +23,28 @@ class Stocks(scrapy.Spider):
         price = re.sub(r"\s", "", price)
         price = float(price)
 
+        # Get "Consensus des analystes"
         blob = response.xpath(
             '//*[contains(text(), "Objectif de cours")]'
         ).get()
-        blob_cleaned = [x.strip() for x in blob.split("\n")]
-        blob_cleaned = [x for x in blob_cleaned if not x.startswith("<")]
-        target = float(re.sub(r"\s|EUR", "", blob_cleaned[1]))
-        potential = float(re.sub(r"\s|%", "", blob_cleaned[3]))
+        if blob is None:
+            target = "NA"
+            potential = "NA"
+        else:
+            blob_cleaned = [x.strip() for x in blob.split("\n")]
+            blob_cleaned = [x for x in blob_cleaned if not x.startswith("<")]
+            target = float(re.sub(r"\s|EUR", "", blob_cleaned[1]))
+            potential = float(re.sub(r"\s|%", "", blob_cleaned[3]))
 
+        gauge = response.xpath(
+            '//div[@class="c-median-gauge__tooltip"]/text()'
+        ).get()
+        if gauge is None:
+            gauge = "NA"
+        else:
+            gauge = float(gauge)
+
+        # Get "Variation sur 5 jours"
         blob = response.xpath(
             '//*[contains(text(), "Variation sur 5 jours")]'
         ).get()
@@ -41,11 +55,7 @@ class Stocks(scrapy.Spider):
         else:
             variation = "NA"
 
-        gauge = response.xpath(
-            '//div[@class="c-median-gauge__tooltip"]/text()'
-        ).get()
-        gauge = float(gauge)
-
+        # Store results
         result = {
             "company": company,
             "price": price,
