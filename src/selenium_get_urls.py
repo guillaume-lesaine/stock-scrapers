@@ -148,12 +148,22 @@ def main(data: str, configuration: str):
         pass
     else:
         for p in page_hrefs:
-            try:
+            successful = False
+            number_attempts = 0
+            while not successful and number_attempts < 3:
+                try:
+                    number_attempts += 1
+                    driver.get(p)
+                    successful = True
+                except TimeoutException:
+                    logging.info("Refreshing page due to timeout ...")
+                    driver.refresh()
+
+            if successful:
+                pass
+            else:
                 driver.get(p)
-            except TimeoutException:
-                logging.info("Refreshing page due to timeout ...")
-                driver.refresh()
-                driver.get(p)
+
             palmares = driver.find_element_by_xpath(
                 '//div[@class="c-palmares"]'
             )

@@ -8,7 +8,7 @@ services:
 
   scraper:
     container_name: 'scraper'
-    image: 'stock-scrapers/boursorama-france:0.3'
+    image: 'stock-scrapers/boursorama-france:0.4'
     volumes:
       - './mnt:/app/mnt'
     depends_on:
